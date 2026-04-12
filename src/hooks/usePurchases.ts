@@ -1,85 +1,56 @@
-// FILE: src/hooks/usePurchases.ts
-import { useCallback, useEffect, useState } from 'react';
+// C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\src\hooks\usePurchases.ts
+import { useCallback, useState } from 'react';
 import {
   checkEntitlement,
-  getUnlockProduct,
+  initializePurchases,
   purchaseExportUnlock,
-  restorePurchases
+  restorePurchases,
 } from '@/services/purchases.service';
 
-export function usePurchases() {
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
-  const [isPurchasing, setIsPurchasing] = useState(false);
-  const [displayPrice, setDisplayPrice] = useState('$1.99');
-  const [error, setError] = useState<string | null>(null);
+export default function usePurchases() {
+  const [loading, setLoading] = useState(false);
 
-  const refreshEntitlement = useCallback(async () => {
-    setIsChecking(true);
+  const init = useCallback(async () => {
+    setLoading(true);
     try {
-      const product = await getUnlockProduct().catch(() => null);
-      if (product?.priceString) {
-        setDisplayPrice(product.priceString);
-      }
-
-      const unlocked = await checkEntitlement();
-      setIsUnlocked(unlocked);
-      setError(null);
-    } catch (nextError: any) {
-      setError(nextError?.message ?? 'Failed to check entitlement.');
+      await initializePurchases();
     } finally {
-      setIsChecking(false);
+      setLoading(false);
+    }
+  }, []);
+
+  const checkAccess = useCallback(async () => {
+    setLoading(true);
+    try {
+      return await checkEntitlement();
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   const purchase = useCallback(async () => {
-    setIsPurchasing(true);
-    setError(null);
+    setLoading(true);
     try {
-      const result = await purchaseExportUnlock();
-      if (result === 'success') {
-        setIsUnlocked(true);
-      } else if (result === 'cancelled') {
-        setError('Purchase cancelled.');
-      } else {
-        setError('Unable to complete purchase.');
-      }
-      return result;
+      return await purchaseExportUnlock();
     } finally {
-      setIsPurchasing(false);
+      setLoading(false);
     }
   }, []);
 
   const restore = useCallback(async () => {
-    setIsPurchasing(true);
-    setError(null);
+    setLoading(true);
     try {
-      const restored = await restorePurchases();
-      setIsUnlocked(restored);
-      if (!restored) {
-        setError('No previous purchases were found.');
-      }
-      return restored;
-    } catch (nextError: any) {
-      setError(nextError?.message ?? 'Restore failed.');
-      return false;
+      return await restorePurchases();
     } finally {
-      setIsPurchasing(false);
+      setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    refreshEntitlement();
-  }, [refreshEntitlement]);
-
   return {
-    isUnlocked,
-    isChecking,
-    isPurchasing,
-    displayPrice,
-    error,
-    refreshEntitlement,
+    loading,
+    init,
+    checkAccess,
     purchase,
-    restore
+    restore,
   };
 }

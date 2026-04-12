@@ -1,20 +1,21 @@
+// C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\babel.config.js
 module.exports = function (api) {
   api.cache(true);
 
   return {
-    presets: ["babel-preset-expo"],
+    presets: ['babel-preset-expo'],
     plugins: [
-      "expo-router/babel",
       [
-        "module-resolver",
+        'module-resolver',
         {
+          root: ['.'],
           alias: {
-            "@": "./src"
+            '@': './src',
           },
-          extensions: [".tsx", ".ts", ".js", ".json"]
-        }
+          extensions: ['.tsx', '.ts', '.js', '.json'],
+        },
       ],
-      "react-native-reanimated/plugin"
-    ]
+      'react-native-reanimated/plugin',
+    ],
   };
 };
