@@ -21,10 +21,19 @@ const guessContentType = (fileName: string): string => {
   return 'application/octet-stream';
 };
 
-const uriToBlob = async (uri: string): Promise<Blob> => {
-  const response = await fetch(uri);
-  return await response.blob();
-};
+const uriToBlob = (uri: string): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = function () {
+      resolve(xhr.response);
+    };
+    xhr.onerror = function () {
+      reject(new Error('Could not convert local file to blob.'));
+    };
+    xhr.responseType = 'blob';
+    xhr.open('GET', uri, true);
+    xhr.send(null);
+  });
 
 export async function uploadSingleAsset(
   userId: string,
@@ -53,7 +62,10 @@ export async function uploadManyAssets(
   const uploads = assets.map(async (asset, index) => {
     const fileName = asset.fileName?.trim() || `photo-${index + 1}.jpg`;
     const blob = await uriToBlob(asset.uri);
-    const storageRef = ref(storage, `users/${userId}/${folder}/${Date.now()}-${index + 1}-${fileName}`);
+    const storageRef = ref(
+      storage,
+      `users/${userId}/${folder}/${Date.now()}-${index + 1}-${fileName}`
+    );
 
     await uploadBytes(storageRef, blob, {
       contentType: guessContentType(fileName),
@@ -64,8 +76,3 @@ export async function uploadManyAssets(
 
   return await Promise.all(uploads);
 }
-
-export const storageService = {
-  uploadSingleAsset,
-  uploadManyAssets,
-};
