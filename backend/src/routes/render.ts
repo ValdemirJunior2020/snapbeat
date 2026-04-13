@@ -65,10 +65,10 @@ renderRouter.post(
     const audio = files?.audio?.[0];
     const watermark = files?.watermark?.[0];
 
-    const { format, style, bpm, titleText, projectId } = req.body;
+    const { format, style, bpm, titleText } = req.body;
 
-    if (!projectId || !photos.length || !audio) {
-      return res.status(400).json({ error: 'Photos, audio, and projectId are required.' });
+    if (!photos.length || !audio) {
+      return res.status(400).json({ error: 'Photos and audio are required.' });
     }
 
     const jobId = uuidv4();
