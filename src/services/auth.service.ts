@@ -1,5 +1,4 @@
 // C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\src\services\auth.service.ts
-
 import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -30,7 +29,7 @@ const mapUser = (user: FirebaseUser | null): AuthUser | null => {
 
 export const authService = {
   async login(email: string, password: string): Promise<AuthUser> {
-    const credential = await signInWithEmailAndPassword(auth, email, password);
+    const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
     return mapUser(credential.user)!;
   },
 
@@ -39,7 +38,7 @@ export const authService = {
     password: string,
     displayName?: string
   ): Promise<AuthUser> {
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
 
     if (displayName?.trim()) {
       await updateProfile(credential.user, { displayName: displayName.trim() });
@@ -49,7 +48,7 @@ export const authService = {
   },
 
   async forgotPassword(email: string): Promise<void> {
-    await sendPasswordResetEmail(auth, email);
+    await sendPasswordResetEmail(auth, email.trim());
   },
 
   async logout(): Promise<void> {
