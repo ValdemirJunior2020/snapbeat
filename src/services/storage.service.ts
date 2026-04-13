@@ -1,7 +1,11 @@
 // C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\src\services\storage.service.ts
-
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from './firebase';
+
+export interface UploadableAsset {
+  uri: string;
+  fileName?: string;
+}
 
 const guessContentType = (fileName: string): string => {
   const lower = fileName.toLowerCase();
@@ -22,54 +26,46 @@ const uriToBlob = async (uri: string): Promise<Blob> => {
   return await response.blob();
 };
 
-export const storageService = {
-  async uploadFile(
-    uri: string,
-    destinationPath: string,
-    fileName: string
-  ): Promise<string> {
-    const blob = await uriToBlob(uri);
-    const storageRef = ref(storage, `${destinationPath}/${fileName}`);
+export async function uploadSingleAsset(
+  userId: string,
+  asset: UploadableAsset,
+  folder: 'audio' | 'watermarks'
+): Promise<string> {
+  const fileName =
+    asset.fileName?.trim() ||
+    (folder === 'audio' ? 'audio-file.m4a' : 'watermark.png');
+
+  const blob = await uriToBlob(asset.uri);
+  const storageRef = ref(storage, `users/${userId}/${folder}/${Date.now()}-${fileName}`);
+
+  await uploadBytes(storageRef, blob, {
+    contentType: guessContentType(fileName),
+  });
+
+  return await getDownloadURL(storageRef);
+}
+
+export async function uploadManyAssets(
+  userId: string,
+  assets: UploadableAsset[],
+  folder: 'photos'
+): Promise<string[]> {
+  const uploads = assets.map(async (asset, index) => {
+    const fileName = asset.fileName?.trim() || `photo-${index + 1}.jpg`;
+    const blob = await uriToBlob(asset.uri);
+    const storageRef = ref(storage, `users/${userId}/${folder}/${Date.now()}-${index + 1}-${fileName}`);
 
     await uploadBytes(storageRef, blob, {
       contentType: guessContentType(fileName),
     });
 
     return await getDownloadURL(storageRef);
-  },
+  });
 
-  async uploadProjectPhoto(
-    userId: string,
-    projectId: string,
-    localUri: string,
-    index: number
-  ): Promise<string> {
-    const fileName = `photo-${index + 1}.jpg`;
-    return this.uploadFile(localUri, `users/${userId}/projects/${projectId}/photos`, fileName);
-  },
+  return await Promise.all(uploads);
+}
 
-  async uploadProjectAudio(
-    userId: string,
-    projectId: string,
-    localUri: string,
-    originalFileName: string
-  ): Promise<string> {
-    return this.uploadFile(
-      localUri,
-      `users/${userId}/projects/${projectId}/audio`,
-      originalFileName
-    );
-  },
-
-  async uploadWatermark(
-    userId: string,
-    projectId: string,
-    localUri: string
-  ): Promise<string> {
-    return this.uploadFile(
-      localUri,
-      `users/${userId}/projects/${projectId}/watermark`,
-      'watermark.png'
-    );
-  },
+export const storageService = {
+  uploadSingleAsset,
+  uploadManyAssets,
 };
