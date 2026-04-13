@@ -1,33 +1,42 @@
 // C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\app\index.tsx
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Redirect } from 'expo-router';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useAuth } from '@/hooks/useAuth';
+import { ONBOARDING_KEY } from '@/constants/config';
 
 export default function IndexScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>BeatVideo Maker</Text>
-      <Text style={styles.subtitle}>Provider isolation build</Text>
-    </View>
-  );
-}
+  const { user, initializing } = useAuth();
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0D0D0D',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  subtitle: {
-    color: '#BBBBBB',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-});
+  useEffect(() => {
+    let mounted = true;
+
+    AsyncStorage.getItem(ONBOARDING_KEY)
+      .then((value) => {
+        if (mounted) setHasSeenOnboarding(value === 'true');
+      })
+      .catch(() => {
+        if (mounted) setHasSeenOnboarding(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (initializing || hasSeenOnboarding === null) {
+    return <LoadingSpinner />;
+  }
+
+  if (!hasSeenOnboarding) {
+    return <Redirect href="/onboarding" />;
+  }
+
+  if (!user) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  return <Redirect href="/(app)" />;
+}
