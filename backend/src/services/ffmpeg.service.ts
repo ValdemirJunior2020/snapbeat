@@ -1,15 +1,30 @@
-// FILE: backend/src/services/ffmpeg.service.ts
+// C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\backend\src\services\ffmpeg.service.ts
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { FfmpegRenderOptions } from '../types';
+
+type RenderFormat = 'portrait' | 'square' | 'landscape';
+type RenderStyle = 'fast' | 'romantic' | 'church' | 'cinematic' | 'fun';
+
+interface FfmpegRenderOptions {
+  photos: string[];
+  audioPath: string;
+  format: RenderFormat;
+  style: RenderStyle;
+  bpm: number;
+  titleText?: string;
+  watermarkPath?: string;
+  outputPath: string;
+  fontFile: string;
+  applyWatermark?: boolean;
+}
 
 if (ffmpegStatic) {
   ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH || ffmpegStatic);
 }
 
-function getOutputSize(format: FfmpegRenderOptions['format']) {
+function getOutputSize(format: RenderFormat) {
   switch (format) {
     case 'square':
       return { width: 1080, height: 1080 };
@@ -21,11 +36,11 @@ function getOutputSize(format: FfmpegRenderOptions['format']) {
   }
 }
 
-function escapeDrawtext(text: string): string {
+function escapeDrawtext(text: string) {
   return text.replace(/:/g, '\\:').replace(/'/g, "\\'").replace(/,/g, '\\,');
 }
 
-function calculateSlideDuration(bpm: number, style: FfmpegRenderOptions['style']) {
+function calculateSlideDuration(bpm: number, style: RenderStyle) {
   const beatsPerSlide =
     style === 'fast' ? 1.5 : style === 'fun' ? 1.8 : style === 'cinematic' ? 2.5 : 2;
 
@@ -48,9 +63,7 @@ export async function renderSlideshowVideo(
     const command = ffmpeg();
 
     options.photos.forEach((photoPath) => {
-      command
-        .addInput(photoPath)
-        .inputOptions(['-loop 1', `-t ${slideDuration}`]);
+      command.addInput(photoPath).inputOptions(['-loop 1', `-t ${slideDuration}`]);
     });
 
     command.addInput(options.audioPath);
@@ -91,12 +104,20 @@ export async function renderSlideshowVideo(
       videoLabel = titleLabel;
     }
 
-    if (options.watermarkPath) {
-      const watermarkLabel = '[withwm]';
+    if (options.applyWatermark) {
+      const textWatermarkLabel = '[withtextwm]';
       complexFilters.push(
-        `[${watermarkInputIndex}:v]scale=220:-1[wm];${videoLabel}[wm]overlay=W-w-32:H-h-32${watermarkLabel}`
+        `${videoLabel}drawtext=fontfile='${options.fontFile}':text='Made with SnapBeat':fontcolor=white:fontsize=28:box=1:boxcolor=black@0.35:boxborderw=12:x=w-text_w-24:y=24${textWatermarkLabel}`
       );
-      videoLabel = watermarkLabel;
+      videoLabel = textWatermarkLabel;
+    }
+
+    if (options.watermarkPath) {
+      const imageWatermarkLabel = '[withwm]';
+      complexFilters.push(
+        `[${watermarkInputIndex}:v]scale=220:-1[wm];${videoLabel}[wm]overlay=W-w-32:H-h-32${imageWatermarkLabel}`
+      );
+      videoLabel = imageWatermarkLabel;
     }
 
     const audioInputIndex = options.photos.length;
@@ -121,7 +142,7 @@ export async function renderSlideshowVideo(
         '-level 4.1',
         '-crf 22',
         '-c:a aac',
-        '-b:a 192k'
+        '-b:a 192k',
       ])
       .on('progress', (progress) => {
         if (typeof progress.percent === 'number') {

@@ -14,8 +14,8 @@ import { useRender } from '@/hooks/useRender';
 import { useToast } from '@/hooks/useToast';
 import { createProject, updateProject } from '@/services/firestore.service';
 import { createRenderJob } from '@/services/render.service';
-import { uploadManyAssets, uploadSingleAsset } from '@/services/storage.service';
-import { CreateFlowState } from '@/types';
+import { checkEntitlement } from '@/services/purchases.service';
+import { CreateFlowState, LocalMediaAsset } from '@/types';
 
 const initialDraft: CreateFlowState = {
   photos: [],
@@ -27,6 +27,25 @@ const initialDraft: CreateFlowState = {
   watermark: null,
   audio: null,
 };
+
+function appendAsset(
+  formData: FormData,
+  fieldName: string,
+  asset: LocalMediaAsset,
+  fallbackName: string,
+  fallbackType: string
+) {
+  const normalizedUri =
+    asset.uri.startsWith('file://') || asset.uri.startsWith('content://')
+      ? asset.uri
+      : `file://${asset.uri}`;
+
+  formData.append(fieldName, {
+    uri: normalizedUri,
+    name: asset.fileName || fallbackName,
+    type: asset.mimeType || fallbackType,
+  } as any);
+}
 
 export default function ProcessingScreen() {
   const { user } = useAuth();
@@ -42,32 +61,32 @@ export default function ProcessingScreen() {
 
   const computedProgress = useMemo(() => {
     if (job) {
-      return Math.max(localProgress, Math.min(100, 25 + Math.round(job.progress * 0.75)));
+      return Math.max(localProgress, Math.min(100, job.progress));
     }
     return localProgress;
   }, [job, localProgress]);
 
   const computedStatus = useMemo(() => {
     if (!job) return localStatus;
-    if (job.status === 'pending') return 'Generating slideshow…';
-    if (job.status === 'processing' && job.progress < 50) return 'Adding music…';
-    if (job.status === 'processing' && job.progress >= 50) return 'Finalizing…';
+    if (job.status === 'pending') return 'Preparing render…';
+    if (job.status === 'processing' && job.progress < 50) return 'Rendering slideshow…';
+    if (job.status === 'processing' && job.progress >= 50) return 'Finalizing video…';
     if (job.status === 'complete') return 'Video complete.';
     if (job.status === 'error') return job.error ?? 'Rendering failed.';
     return localStatus;
   }, [job, localStatus]);
 
   useEffect(() => {
-    if (job?.status === 'complete' && projectId) {
+    if (job?.status === 'complete' && projectId && jobId) {
       AsyncStorage.removeItem(CREATE_DRAFT_KEY).catch(() => undefined);
       showToast('Video ready.', 'success');
-      router.replace(`/(app)/preview/${projectId}`);
+      router.replace(`/(app)/preview/${projectId}?jobId=${jobId}`);
     }
 
     if (job?.status === 'error') {
       setErrorMessage(job.error ?? 'Render failed.');
     }
-  }, [job, projectId, showToast]);
+  }, [job, projectId, jobId, showToast]);
 
   useEffect(() => {
     let isMounted = true;
@@ -86,8 +105,8 @@ export default function ProcessingScreen() {
         const rawValue = await AsyncStorage.getItem(CREATE_DRAFT_KEY);
         const draft: CreateFlowState = rawValue ? JSON.parse(rawValue) : initialDraft;
 
-        if (!draft.photos.length) {
-          throw new Error('No photos were found in the draft.');
+        if (draft.photos.length < 3) {
+          throw new Error('Please select at least 3 photos.');
         }
 
         if (!draft.audio) {
@@ -105,45 +124,62 @@ export default function ProcessingScreen() {
           bpm: draft.bpm ?? DEFAULT_BPM,
           photoCount: draft.photos.length,
           audioName: draft.audio.fileName ?? 'Selected audio',
-          status: 'uploading',
+          status: 'pending',
         });
 
         if (!isMounted) return;
-
         setProjectId(nextProjectId);
-        setLocalStatus('Uploading photos…');
+
+        setLocalStatus('Uploading to render server…');
         setLocalProgress(10);
 
-        const photoUrls = await uploadManyAssets(user.uid, draft.photos, 'photos');
+        const hasExportUnlock = await checkEntitlement();
 
-        setLocalStatus('Uploading audio…');
-        const audioUrl = await uploadSingleAsset(user.uid, draft.audio, 'audio');
+        const formData = new FormData();
+        formData.append('userId', user.uid);
+        formData.append('projectId', nextProjectId);
+        formData.append('format', draft.format);
+        formData.append('style', draft.style);
+        formData.append('bpm', String(draft.bpm ?? DEFAULT_BPM));
+        formData.append('titleText', draft.titleText.trim() || '');
+        formData.append('applyWatermark', String(!hasExportUnlock));
 
-        let watermarkUrl: string | undefined;
-        if (draft.watermark) {
-          setLocalStatus('Uploading watermark…');
-          watermarkUrl = await uploadSingleAsset(user.uid, draft.watermark, 'watermarks');
-        }
-
-        setLocalProgress(25);
-        setLocalStatus('Submitting render job…');
-
-        const renderResponse = await createRenderJob({
-          photos: photoUrls,
-          audioUrl,
-          format: draft.format,
-          style: draft.style,
-          bpm: draft.bpm ?? DEFAULT_BPM,
-          titleText: draft.titleText.trim() || undefined,
-          watermarkUrl,
-          userId: user.uid,
-          projectId: nextProjectId,
+        draft.photos.forEach((photo, index) => {
+          appendAsset(
+            formData,
+            'photos',
+            photo,
+            photo.fileName || `photo-${index + 1}.jpg`,
+            photo.mimeType || 'image/jpeg'
+          );
         });
 
+        appendAsset(
+          formData,
+          'audio',
+          draft.audio,
+          draft.audio.fileName || 'audio-track.m4a',
+          draft.audio.mimeType || 'audio/mpeg'
+        );
+
+        if (draft.watermark) {
+          appendAsset(
+            formData,
+            'watermark',
+            draft.watermark,
+            draft.watermark.fileName || 'watermark.png',
+            draft.watermark.mimeType || 'image/png'
+          );
+        }
+
+        setLocalStatus('Submitting render job…');
+        setLocalProgress(20);
+
+        const renderResponse = await createRenderJob(formData);
+
         await updateProject(nextProjectId, {
-          status: 'pending',
+          status: 'processing',
           renderJobId: renderResponse.jobId,
-          watermarkUrl,
         });
 
         if (!isMounted) return;
@@ -178,7 +214,11 @@ export default function ProcessingScreen() {
           <Text style={styles.errorTitle}>Something went wrong</Text>
           <Text style={styles.errorText}>{errorMessage}</Text>
           <Button label="Retry" onPress={() => router.replace('/(app)/create/processing')} />
-          <Button label="Back to Options" onPress={() => router.replace('/(app)/create/options')} variant="ghost" />
+          <Button
+            label="Back to Options"
+            onPress={() => router.replace('/(app)/create/options')}
+            variant="ghost"
+          />
         </Card>
       ) : null}
 
