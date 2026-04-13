@@ -1,6 +1,7 @@
-// FILE: app/(app)/create/music.tsx
+// C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\app\(app)\create\music.tsx
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Asset } from 'expo-asset';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
@@ -14,6 +15,8 @@ import { CreateFlowState, LocalMediaAsset } from '@/types';
 import { validateBpm } from '@/utils/validation';
 import { useToast } from '@/hooks/useToast';
 
+const bundledDefaultTrack = require('../../../assets/Golden Movieframe.mp3');
+
 const initialDraft: CreateFlowState = {
   photos: [],
   useDefaultMusic: true,
@@ -22,7 +25,7 @@ const initialDraft: CreateFlowState = {
   style: 'fast',
   titleText: '',
   watermark: null,
-  audio: null
+  audio: null,
 };
 
 export default function MusicScreen() {
@@ -50,7 +53,7 @@ export default function MusicScreen() {
     const nextState: CreateFlowState = {
       ...initialDraft,
       ...parsed,
-      ...partial
+      ...partial,
     };
 
     await AsyncStorage.setItem(CREATE_DRAFT_KEY, JSON.stringify(nextState));
@@ -62,23 +65,47 @@ export default function MusicScreen() {
   const pickAudio = async () => {
     const result = await DocumentPicker.getDocumentAsync({
       type: ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/*'],
-      copyToCacheDirectory: true
+      copyToCacheDirectory: true,
     });
 
     if (result.canceled) return;
+
     const asset = result.assets[0];
 
     const nextAudio: LocalMediaAsset = {
       uri: asset.uri,
       fileName: asset.name,
-      mimeType: asset.mimeType,
-      duration: null
+      mimeType: asset.mimeType ?? 'audio/mpeg',
+      duration: null,
     };
 
     await persist({
       audio: nextAudio,
-      useDefaultMusic: false
+      useDefaultMusic: false,
     });
+
+    showToast('Custom audio selected.', 'success');
+  };
+
+  const useBundledSong = async () => {
+    const asset = Asset.fromModule(bundledDefaultTrack);
+    if (!asset.localUri) {
+      await asset.downloadAsync();
+    }
+
+    const nextAudio: LocalMediaAsset = {
+      uri: asset.localUri ?? asset.uri,
+      fileName: 'Golden Movieframe.mp3',
+      mimeType: 'audio/mpeg',
+      duration: null,
+    };
+
+    await persist({
+      audio: nextAudio,
+      useDefaultMusic: true,
+    });
+
+    showToast('Golden Movieframe selected as your built-in song.', 'success');
   };
 
   const handleNext = async () => {
@@ -86,8 +113,9 @@ export default function MusicScreen() {
     setBpmError(nextBpmError);
 
     if (nextBpmError) return;
-    if (!useDefaultMusic && !audio) {
-      showToast('Pick an audio file or use the default track.', 'warning');
+
+    if (!audio) {
+      showToast('Pick a song or use Golden Movieframe.', 'warning');
       return;
     }
 
@@ -97,7 +125,7 @@ export default function MusicScreen() {
     }
 
     await persist({
-      bpm: numericBpm || DEFAULT_BPM
+      bpm: numericBpm || DEFAULT_BPM,
     });
 
     router.push('/(app)/create/options');
@@ -106,6 +134,9 @@ export default function MusicScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Choose music and tempo</Text>
+      <Text style={styles.helperText}>
+        You can use your built-in song “Golden Movieframe” or pick your own audio file.
+      </Text>
 
       <MusicPicker
         audio={audio}
@@ -114,10 +145,15 @@ export default function MusicScreen() {
         onToggleDefault={(value) =>
           persist({
             useDefaultMusic: value,
-            audio: value ? null : audio
+            audio: value ? audio : audio,
           })
         }
       />
+
+      <View style={styles.choiceButtons}>
+        <Button label="Use Golden Movieframe" onPress={useBundledSong} variant="secondary" />
+        <Button label="Pick My Own Song" onPress={pickAudio} variant="ghost" />
+      </View>
 
       <Input
         label="BPM"
@@ -145,19 +181,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: spacing.md,
-    gap: spacing.sm
+    gap: spacing.sm,
   },
   title: {
     color: colors.text,
     fontSize: typography.heading2,
-    fontWeight: '800'
+    fontWeight: '800',
   },
   helperText: {
     color: colors.textMuted,
-    fontSize: typography.caption
+    fontSize: typography.caption,
+  },
+  choiceButtons: {
+    gap: spacing.sm,
   },
   actions: {
     marginTop: 'auto',
-    gap: spacing.sm
-  }
+    gap: spacing.sm,
+  },
 });

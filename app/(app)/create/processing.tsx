@@ -1,13 +1,13 @@
-// FILE: app/(app)/create/processing.tsx
+// C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\app\(app)\create\processing.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text } from 'react-native';
 import { router } from 'expo-router';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import ProgressBar from '@/components/ui/ProgressBar';
 import { colors } from '@/constants/colors';
-import { CREATE_DRAFT_KEY, DEFAULT_BPM, DEFAULT_MUSIC_URL } from '@/constants/config';
+import { CREATE_DRAFT_KEY, DEFAULT_BPM } from '@/constants/config';
 import { spacing, typography } from '@/constants/styles';
 import { useAuth } from '@/hooks/useAuth';
 import { useRender } from '@/hooks/useRender';
@@ -25,7 +25,7 @@ const initialDraft: CreateFlowState = {
   style: 'fast',
   titleText: '',
   watermark: null,
-  audio: null
+  audio: null,
 };
 
 export default function ProcessingScreen() {
@@ -90,7 +90,11 @@ export default function ProcessingScreen() {
           throw new Error('No photos were found in the draft.');
         }
 
-        setLocalStatus('Creating project…');
+        if (!draft.audio) {
+          throw new Error('No audio was selected.');
+        }
+
+        setLocalStatus('Creating project in Firestore…');
         setLocalProgress(5);
 
         const nextProjectId = await createProject({
@@ -100,25 +104,24 @@ export default function ProcessingScreen() {
           format: draft.format,
           bpm: draft.bpm ?? DEFAULT_BPM,
           photoCount: draft.photos.length,
-          audioName: draft.useDefaultMusic ? 'Built-in default track' : draft.audio?.fileName ?? 'Custom audio',
-          status: 'uploading'
+          audioName: draft.audio.fileName ?? 'Selected audio',
+          status: 'uploading',
         });
 
         if (!isMounted) return;
 
         setProjectId(nextProjectId);
-        setLocalStatus('Uploading assets…');
+        setLocalStatus('Uploading photos…');
         setLocalProgress(10);
 
         const photoUrls = await uploadManyAssets(user.uid, draft.photos, 'photos');
 
-        let audioUrl = DEFAULT_MUSIC_URL;
-        if (!draft.useDefaultMusic && draft.audio) {
-          audioUrl = await uploadSingleAsset(user.uid, draft.audio, 'audio');
-        }
+        setLocalStatus('Uploading audio…');
+        const audioUrl = await uploadSingleAsset(user.uid, draft.audio, 'audio');
 
         let watermarkUrl: string | undefined;
         if (draft.watermark) {
+          setLocalStatus('Uploading watermark…');
           watermarkUrl = await uploadSingleAsset(user.uid, draft.watermark, 'watermarks');
         }
 
@@ -134,13 +137,13 @@ export default function ProcessingScreen() {
           titleText: draft.titleText.trim() || undefined,
           watermarkUrl,
           userId: user.uid,
-          projectId: nextProjectId
+          projectId: nextProjectId,
         });
 
         await updateProject(nextProjectId, {
           status: 'pending',
           renderJobId: renderResponse.jobId,
-          watermarkUrl
+          watermarkUrl,
         });
 
         if (!isMounted) return;
@@ -192,38 +195,38 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: spacing.md,
     justifyContent: 'center',
-    gap: spacing.md
+    gap: spacing.md,
   },
   card: {
-    gap: spacing.sm
+    gap: spacing.sm,
   },
   title: {
     color: colors.text,
     fontSize: typography.heading2,
-    fontWeight: '800'
+    fontWeight: '800',
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: typography.body
+    fontSize: typography.body,
   },
   progressText: {
     color: colors.accent,
     fontSize: typography.caption,
     fontWeight: '700',
-    textAlign: 'right'
+    textAlign: 'right',
   },
   errorTitle: {
     color: colors.error,
     fontSize: typography.body,
-    fontWeight: '800'
+    fontWeight: '800',
   },
   errorText: {
     color: colors.textMuted,
-    fontSize: typography.body
+    fontSize: typography.body,
   },
   note: {
     color: colors.textMuted,
     fontSize: typography.caption,
-    textAlign: 'center'
-  }
+    textAlign: 'center',
+  },
 });
