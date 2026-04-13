@@ -1,0 +1,78 @@
+// FILE: app.config.ts
+
+import 'dotenv/config';
+import { ExpoConfig, ConfigContext } from 'expo/config';
+
+export default ({ config }: ConfigContext): ExpoConfig => ({
+  ...config,
+  name: 'BeatVideo Maker',
+  slug: 'beat-video-maker',
+  scheme: 'beatvideomaker',
+  version: '1.0.0',
+  orientation: 'portrait',
+  userInterfaceStyle: 'dark',
+  icon: './assets/icon.png',
+  splash: {
+    image: './assets/splash.png',
+    resizeMode: 'contain',
+    backgroundColor: '#0D0D0D',
+  },
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
+  updates: {
+    url: 'https://u.expo.dev/25cd5831-8661-4133-8f8a-5a4dca4d8676',
+  },
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: 'com.beatvideomaker.app',
+    infoPlist: {
+      NSPhotoLibraryUsageDescription:
+        'BeatVideo Maker needs access to your photos so you can build slideshow videos.',
+      NSPhotoLibraryAddUsageDescription:
+        'BeatVideo Maker saves exported videos to share them.',
+      NSCameraUsageDescription:
+        'BeatVideo Maker can use the camera when you choose a photo or watermark.',
+      ITSAppUsesNonExemptEncryption: false,
+      LSApplicationQueriesSchemes: ['instagram'],
+    },
+  },
+  android: {
+    package: 'com.beatvideomaker.app',
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#0D0D0D',
+    },
+    permissions: ['READ_MEDIA_IMAGES', 'READ_MEDIA_VIDEO', 'READ_MEDIA_AUDIO'],
+  },
+  plugins: [
+    'expo-router',
+    'expo-dev-client',
+    [
+      'expo-build-properties',
+      {
+        ios: {
+          useFrameworks: 'static',
+        },
+      },
+    ],
+    [
+      'expo-image-picker',
+      {
+        photosPermission:
+          'BeatVideo Maker needs access to your photos so you can create videos.',
+        cameraPermission:
+          'BeatVideo Maker can access your camera if you want to capture a new image.',
+      },
+    ],
+    'expo-document-picker',
+  ],
+  experiments: {
+    typedRoutes: true,
+  },
+  extra: {
+    eas: {
+      projectId: '25cd5831-8661-4133-8f8a-5a4dca4d8676',
+    },
+  },
+});

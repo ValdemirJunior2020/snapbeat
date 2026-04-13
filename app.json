@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "BeatVideo Maker",
+    "slug": "beat-video-maker",
+    "scheme": "beatvideomaker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D0D0D"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/25cd5831-8661-4133-8f8a-5a4dca4d8676"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.beatvideomaker.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.beatvideomaker.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0D0D0D"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "25cd5831-8661-4133-8f8a-5a4dca4d8676"
+      }
+    }
+  }
+}
