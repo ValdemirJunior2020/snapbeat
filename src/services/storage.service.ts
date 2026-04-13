@@ -24,12 +24,8 @@ const guessContentType = (fileName: string): string => {
 const uriToBlob = (uri: string): Promise<Blob> =>
   new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.onload = function () {
-      resolve(xhr.response);
-    };
-    xhr.onerror = function () {
-      reject(new Error('Could not convert local file to blob.'));
-    };
+    xhr.onload = () => resolve(xhr.response);
+    xhr.onerror = () => reject(new Error('Could not convert local file to blob.'));
     xhr.responseType = 'blob';
     xhr.open('GET', uri, true);
     xhr.send(null);
@@ -76,3 +72,8 @@ export async function uploadManyAssets(
 
   return await Promise.all(uploads);
 }
+
+export const storageService = {
+  uploadSingleAsset,
+  uploadManyAssets,
+};
