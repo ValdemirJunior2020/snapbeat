@@ -1,4 +1,4 @@
-// FILE: app/(auth)/signup.tsx
+// C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\app\(auth)\signup.tsx
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import Button from '@/components/ui/Button';
@@ -15,12 +15,18 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import { colors } from '@/constants/colors';
 import { spacing, typography } from '@/constants/styles';
-import { signUp } from '@/services/auth.service';
-import { validateConfirmPassword, validateEmail, validatePassword } from '@/utils/validation';
+import {
+  validateConfirmPassword,
+  validateEmail,
+  validatePassword,
+} from '@/utils/validation';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function SignupScreen() {
   const { showToast } = useToast();
+  const { signup } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -42,7 +48,7 @@ export default function SignupScreen() {
 
     try {
       setIsLoading(true);
-      await signUp(email, password);
+      await signup(email, password);
       showToast('Account created.', 'success');
       router.replace('/(app)');
     } catch (error: any) {
@@ -60,7 +66,9 @@ export default function SignupScreen() {
       >
         <View style={styles.content}>
           <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.subtitle}>Save projects, render videos, and unlock exports forever.</Text>
+          <Text style={styles.subtitle}>
+            Save projects, render videos, and unlock exports forever.
+          </Text>
 
           <Card style={styles.card}>
             <Input
@@ -73,6 +81,7 @@ export default function SignupScreen() {
               error={emailError}
               placeholder="you@example.com"
             />
+
             <Input
               label="Password"
               value={password}
@@ -81,6 +90,7 @@ export default function SignupScreen() {
               placeholder="At least 6 characters"
               secureTextEntry
             />
+
             <Input
               label="Confirm password"
               value={confirmPassword}
@@ -89,6 +99,7 @@ export default function SignupScreen() {
               placeholder="Repeat password"
               secureTextEntry
             />
+
             <Button label="Create Account" onPress={handleSignup} loading={isLoading} />
           </Card>
 
@@ -108,42 +119,42 @@ export default function SignupScreen() {
 
 const styles = StyleSheet.create({
   flex: {
-    flex: 1
+    flex: 1,
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     padding: spacing.md,
-    gap: spacing.sm
+    gap: spacing.sm,
   },
   title: {
     color: colors.text,
     fontSize: typography.heading1,
-    fontWeight: '800'
+    fontWeight: '800',
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: typography.body
+    fontSize: typography.body,
   },
   card: {
-    gap: spacing.sm
+    gap: spacing.sm,
   },
   bottomRow: {
     flexDirection: 'row',
     gap: spacing.xs,
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
   bottomText: {
     color: colors.textMuted,
-    fontSize: typography.caption
+    fontSize: typography.caption,
   },
   link: {
     color: colors.accent,
     fontSize: typography.caption,
-    fontWeight: '700'
-  }
+    fontWeight: '700',
+  },
 });
