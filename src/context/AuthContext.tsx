@@ -1,28 +1,24 @@
-// FILE: src/context/AuthContext.tsx
+// C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\src\context\AuthContext.tsx
 import React, { createContext, PropsWithChildren, useEffect, useMemo, useState } from 'react';
-import { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import { subscribeToAuthState } from '@/services/auth.service';
-import { User } from '@/types';
+import { authService, AuthUser } from '@/services/auth.service';
 
 interface AuthContextValue {
-  user: User | null;
-  firebaseUser: FirebaseAuthTypes.User | null;
+  user: AuthUser | null;
   initializing: boolean;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
   user: null,
-  firebaseUser: null,
-  initializing: true
+  initializing: true,
 });
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthTypes.User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuthState((nextUser) => {
-      setFirebaseUser(nextUser);
+    const unsubscribe = authService.subscribe((nextUser) => {
+      setUser(nextUser);
       setInitializing(false);
     });
 
@@ -31,16 +27,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      firebaseUser,
+      user,
       initializing,
-      user: firebaseUser
-        ? {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email
-          }
-        : null
     }),
-    [firebaseUser, initializing]
+    [user, initializing]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
