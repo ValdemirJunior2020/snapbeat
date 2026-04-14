@@ -8,7 +8,7 @@ import { renderRouter } from './routes/render';
 
 const app = express();
 
-const port = Number(process.env.BACKEND_PORT || 4000);
+const port = Number(process.env.PORT || process.env.BACKEND_PORT || 4000);
 const corsOrigin = process.env.BACKEND_CORS_ORIGIN || '*';
 const tmpRoot = process.env.TMP_DIR || path.resolve(process.cwd(), 'tmp');
 
@@ -44,5 +44,5 @@ app.use((error: any, _req: express.Request, res: express.Response, _next: expres
 });
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`BeatVideoMaker backend running on http://0.0.0.0:${port}`);
+  console.log(`BeatVideoMaker backend running on port ${port}`);
 });
