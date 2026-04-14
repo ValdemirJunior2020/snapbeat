@@ -43,14 +43,8 @@ async function ensureLocalUploadFile(
   const fileName = getSafeFileName(asset.fileName, fallbackName);
   const targetFile = new File(uploadsDir, `${Date.now()}-${fileName}`);
 
-  const sourceUri = asset.uri.startsWith('file://') ? asset.uri : asset.uri;
-
-  try {
-    const sourceFile = new File(sourceUri);
-    sourceFile.copy(targetFile);
-  } catch {
-    await File.downloadFileAsync(sourceUri, uploadsDir);
-  }
+  const sourceFile = new File(asset.uri);
+  sourceFile.copy(targetFile);
 
   return {
     uri: targetFile.uri,
@@ -214,10 +208,7 @@ export default function ProcessingScreen() {
         if (!isMounted) return;
         setJobId(renderResponse.jobId);
       } catch (error: any) {
-        const message =
-          error?.message ||
-          error?.toString?.() ||
-          'Processing failed.';
+        const message = error?.message || error?.toString?.() || 'Processing failed.';
         setErrorMessage(message);
       } finally {
         if (isMounted) {
