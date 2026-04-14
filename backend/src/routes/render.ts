@@ -1,5 +1,5 @@
 // C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\backend\src\routes\render.ts
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -16,6 +16,24 @@ type RenderJobRecord = {
   outputPath?: string;
   tempDir?: string;
   downloadUrl?: string;
+};
+
+type RenderRequestBody = {
+  format?: 'portrait' | 'square' | 'landscape';
+  style?: 'fast' | 'romantic' | 'church' | 'cinematic' | 'fun';
+  bpm?: string;
+  titleText?: string;
+  applyWatermark?: string;
+};
+
+type RenderFiles = {
+  photos?: Express.Multer.File[];
+  audio?: Express.Multer.File[];
+  watermark?: Express.Multer.File[];
+};
+
+type MulterRequest = Request<{}, any, RenderRequestBody> & {
+  files?: RenderFiles;
 };
 
 export const renderJobs = new Map<string, RenderJobRecord>();
@@ -54,18 +72,13 @@ renderRouter.post(
     { name: 'audio', maxCount: 1 },
     { name: 'watermark', maxCount: 1 },
   ]),
-  async (req, res) => {
-    const files = req.files as {
-      photos?: Express.Multer.File[];
-      audio?: Express.Multer.File[];
-      watermark?: Express.Multer.File[];
-    };
+  async (req: MulterRequest, res: Response) => {
+    const files = req.files ?? {};
+    const photos = files.photos ?? [];
+    const audio = files.audio?.[0];
+    const watermark = files.watermark?.[0];
 
-    const photos = files?.photos ?? [];
-    const audio = files?.audio?.[0];
-    const watermark = files?.watermark?.[0];
-
-    const { format, style, bpm, titleText } = req.body;
+    const { format = 'portrait', style = 'fast', bpm = '120', titleText, applyWatermark } = req.body;
 
     if (!photos.length || !audio) {
       return res.status(400).json({ error: 'Photos and audio are required.' });
@@ -128,7 +141,7 @@ renderRouter.post(
             titleText: titleText?.trim() || undefined,
             watermarkPath,
             outputPath,
-            applyWatermark: String(req.body.applyWatermark) === 'true',
+            applyWatermark: String(applyWatermark) === 'true',
             fontFile:
               process.env.FONT_FILE || '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
           },
@@ -160,23 +173,9 @@ renderRouter.post(
   }
 );
 
-renderRouter.get('/:jobId', async (req, res) => {
-  const job = renderJobs.get(req.params.jobId);
-
-  if (!job) {
-    return res.status(404).json({ error: 'Render job not found.' });
-  }
-
-  return res.json({
-    status: job.status,
-    progress: job.progress,
-    error: job.error,
-    downloadUrl: job.status === 'complete' ? `/render/${job.id}/download` : undefined,
-  });
-});
-
-renderRouter.get('/:jobId/download', async (req, res) => {
-  const job = renderJobs.get(req.params.jobId);
+renderRouter.get('/:jobId/download', async (req: Request, res: Response) => {
+  const jobId = Array.isArray(req.params.jobId) ? req.params.jobId[0] : req.params.jobId;
+  const job = renderJobs.get(jobId);
 
   if (!job || job.status !== 'complete' || !job.outputPath) {
     return res.status(404).json({ error: 'Rendered video not found.' });
