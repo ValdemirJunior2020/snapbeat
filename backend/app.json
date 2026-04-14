@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "6100e32e-3cf9-4264-b990-15000bc1d014"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.infojr.83.beatvideomakerbackend",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}

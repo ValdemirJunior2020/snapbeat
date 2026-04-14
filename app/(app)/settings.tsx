@@ -1,4 +1,4 @@
-// FILE: app/(app)/settings.tsx
+// C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\app\(app)\settings.tsx
 import React, { useState } from 'react';
 import { Alert, Linking, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -10,11 +10,10 @@ import { spacing, typography } from '@/constants/styles';
 import { useAuth } from '@/hooks/useAuth';
 import { usePurchases } from '@/hooks/usePurchases';
 import { useToast } from '@/hooks/useToast';
-import { deleteCurrentAccount, signOutUser } from '@/services/auth.service';
 
 export default function SettingsScreen() {
-  const { user } = useAuth();
-  const { restore, isPurchasing } = usePurchases();
+  const { user, logout, deleteCurrentUser } = useAuth();
+  const { restore, loading } = usePurchases();
   const { showToast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -24,14 +23,14 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = async () => {
-    await signOutUser();
+    await logout();
     router.replace('/(auth)/login');
   };
 
   const handleDelete = () => {
     Alert.alert(
       'Delete account',
-      'This will delete your Firebase auth account. Your project files in storage should be cleaned up manually if you need full account erasure.',
+      'This will delete your account.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -40,7 +39,7 @@ export default function SettingsScreen() {
           onPress: async () => {
             try {
               setIsDeleting(true);
-              await deleteCurrentAccount();
+              await deleteCurrentUser();
               showToast('Account deleted.', 'success');
               router.replace('/(auth)/login');
             } catch (error: any) {
@@ -48,8 +47,8 @@ export default function SettingsScreen() {
             } finally {
               setIsDeleting(false);
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -62,7 +61,7 @@ export default function SettingsScreen() {
       </Card>
 
       <View style={styles.section}>
-        <Button label="Restore Purchases" onPress={handleRestore} loading={isPurchasing} variant="secondary" />
+        <Button label="Restore Purchases" onPress={handleRestore} loading={loading} variant="secondary" />
         <Button label="Privacy Policy" onPress={() => Linking.openURL(PRIVACY_URL)} variant="secondary" />
         <Button label="Terms of Use" onPress={() => Linking.openURL(TERMS_URL)} variant="secondary" />
       </View>
@@ -80,21 +79,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: spacing.md,
-    gap: spacing.md
+    gap: spacing.md,
   },
   card: {
-    gap: spacing.xs
+    gap: spacing.xs,
   },
   label: {
     color: colors.textMuted,
-    fontSize: typography.caption
+    fontSize: typography.caption,
   },
   email: {
     color: colors.text,
     fontSize: typography.body,
-    fontWeight: '700'
+    fontWeight: '700',
   },
   section: {
-    gap: spacing.sm
-  }
+    gap: spacing.sm,
+  },
 });
