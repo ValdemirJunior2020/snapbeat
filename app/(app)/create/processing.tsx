@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, StyleSheet, Text } from 'react-native';
 import { router } from 'expo-router';
+import { Directory, File, Paths } from 'expo-file-system';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import ProgressBar from '@/components/ui/ProgressBar';
@@ -28,22 +29,49 @@ const initialDraft: CreateFlowState = {
   audio: null,
 };
 
-function appendAsset(
+function getSafeFileName(name: string | undefined, fallback: string) {
+  return (name || fallback).replace(/[^\w.\-]+/g, '_');
+}
+
+async function ensureLocalUploadFile(
+  asset: LocalMediaAsset,
+  fallbackName: string
+): Promise<{ uri: string; name: string; type: string }> {
+  const uploadsDir = new Directory(Paths.cache, 'snapbeat-uploads');
+  uploadsDir.create({ idempotent: true });
+
+  const fileName = getSafeFileName(asset.fileName, fallbackName);
+  const targetFile = new File(uploadsDir, `${Date.now()}-${fileName}`);
+
+  const sourceUri = asset.uri.startsWith('file://') ? asset.uri : asset.uri;
+
+  try {
+    const sourceFile = new File(sourceUri);
+    sourceFile.copy(targetFile);
+  } catch {
+    await File.downloadFileAsync(sourceUri, uploadsDir);
+  }
+
+  return {
+    uri: targetFile.uri,
+    name: fileName,
+    type: asset.mimeType || 'application/octet-stream',
+  };
+}
+
+async function appendAsset(
   formData: FormData,
   fieldName: string,
   asset: LocalMediaAsset,
   fallbackName: string,
   fallbackType: string
 ) {
-  const normalizedUri =
-    asset.uri.startsWith('file://') || asset.uri.startsWith('content://')
-      ? asset.uri
-      : `file://${asset.uri}`;
+  const prepared = await ensureLocalUploadFile(asset, fallbackName);
 
   formData.append(fieldName, {
-    uri: normalizedUri,
-    name: asset.fileName || fallbackName,
-    type: asset.mimeType || fallbackType,
+    uri: prepared.uri,
+    name: prepared.name,
+    type: prepared.type || fallbackType,
   } as any);
 }
 
@@ -130,7 +158,7 @@ export default function ProcessingScreen() {
         if (!isMounted) return;
         setProjectId(nextProjectId);
 
-        setLocalStatus('Uploading to render server…');
+        setLocalStatus('Preparing upload…');
         setLocalProgress(10);
 
         const hasExportUnlock = await checkEntitlement();
@@ -144,17 +172,18 @@ export default function ProcessingScreen() {
         formData.append('titleText', draft.titleText.trim() || '');
         formData.append('applyWatermark', String(!hasExportUnlock));
 
-        draft.photos.forEach((photo, index) => {
-          appendAsset(
+        for (let index = 0; index < draft.photos.length; index += 1) {
+          const photo = draft.photos[index];
+          await appendAsset(
             formData,
             'photos',
             photo,
             photo.fileName || `photo-${index + 1}.jpg`,
             photo.mimeType || 'image/jpeg'
           );
-        });
+        }
 
-        appendAsset(
+        await appendAsset(
           formData,
           'audio',
           draft.audio,
@@ -163,7 +192,7 @@ export default function ProcessingScreen() {
         );
 
         if (draft.watermark) {
-          appendAsset(
+          await appendAsset(
             formData,
             'watermark',
             draft.watermark,
@@ -185,7 +214,11 @@ export default function ProcessingScreen() {
         if (!isMounted) return;
         setJobId(renderResponse.jobId);
       } catch (error: any) {
-        setErrorMessage(error?.message ?? 'Processing failed.');
+        const message =
+          error?.message ||
+          error?.toString?.() ||
+          'Processing failed.';
+        setErrorMessage(message);
       } finally {
         if (isMounted) {
           setIsStarting(false);

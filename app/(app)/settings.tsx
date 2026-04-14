@@ -26,7 +26,7 @@ export default function SettingsScreen() {
 
       <Card style={styles.card}>
         <Text style={styles.info}>
-          Purchases and advanced account actions are temporarily disabled while rendering is being stabilized.
+          This screen is temporarily simplified while render and purchase flows are being stabilized.
         </Text>
       </Card>
 

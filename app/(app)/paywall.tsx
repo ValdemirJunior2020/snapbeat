@@ -13,7 +13,7 @@ export default function PaywallScreen() {
       <Card style={styles.card}>
         <Text style={styles.title}>Paywall</Text>
         <Text style={styles.subtitle}>
-          Purchase flow is temporarily disabled while rendering and export are being stabilized.
+          Purchase flow is temporarily disabled while rendering is being stabilized.
         </Text>
       </Card>
 
