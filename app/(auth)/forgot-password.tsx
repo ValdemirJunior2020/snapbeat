@@ -1,4 +1,4 @@
-// FILE: app/(auth)/forgot-password.tsx
+// C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\app\(auth)\forgot-password.tsx
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -7,7 +7,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import { colors } from '@/constants/colors';
 import { spacing, typography } from '@/constants/styles';
-import { sendPasswordReset } from '@/services/auth.service';
+import { authService } from '@/services/auth.service';
 import { validateEmail } from '@/utils/validation';
 import { useToast } from '@/hooks/useToast';
 
@@ -25,7 +25,7 @@ export default function ForgotPasswordScreen() {
 
     try {
       setIsLoading(true);
-      await sendPasswordReset(email);
+      await authService.forgotPassword(email);
       showToast('Password reset email sent.', 'success');
       router.back();
     } catch (error: any) {
@@ -67,28 +67,28 @@ export default function ForgotPasswordScreen() {
 
 const styles = StyleSheet.create({
   flex: {
-    flex: 1
+    flex: 1,
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     padding: spacing.md,
-    gap: spacing.sm
+    gap: spacing.sm,
   },
   title: {
     color: colors.text,
     fontSize: typography.heading1,
-    fontWeight: '800'
+    fontWeight: '800',
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: typography.body
+    fontSize: typography.body,
   },
   card: {
-    gap: spacing.sm
-  }
+    gap: spacing.sm,
+  },
 });

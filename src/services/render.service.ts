@@ -1,38 +1,20 @@
 // C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\src\services\render.service.ts
-import { API_BASE_URL } from '@/constants/config';
-
-export interface RenderJob {
-  status: 'pending' | 'processing' | 'complete' | 'error';
-  progress: number;
-  error?: string;
-  downloadUrl?: string;
+export interface LocalRenderResult {
+  outputUri: string;
 }
 
-export async function createRenderJob(formData: FormData): Promise<{ jobId: string }> {
-  const response = await fetch(`${API_BASE_URL}/render`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || 'Unable to create render job.');
-  }
-
-  return await response.json();
+export async function createRenderJob(): Promise<never> {
+  throw new Error(
+    'Server rendering has been removed from the app flow. SnapBeat is being migrated to on-device rendering.'
+  );
 }
 
-export async function getRenderJob(jobId: string): Promise<RenderJob> {
-  const response = await fetch(`${API_BASE_URL}/render/${jobId}`);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || 'Unable to load render job.');
-  }
-
-  return await response.json();
+export async function getRenderJob(): Promise<never> {
+  throw new Error(
+    'Server render polling has been removed from the app flow. SnapBeat is being migrated to on-device rendering.'
+  );
 }
 
-export function getRenderDownloadUrl(jobId: string): string {
-  return `${API_BASE_URL}/render/${jobId}/download`;
+export function getRenderDownloadUrl(): string {
+  return '';
 }

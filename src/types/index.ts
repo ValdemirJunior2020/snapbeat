@@ -1,13 +1,7 @@
-// FILE: src/types/index.ts
+// C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\src\types\index.ts
 export type VideoFormat = 'portrait' | 'square' | 'landscape';
 export type VideoStyle = 'fast' | 'romantic' | 'church' | 'cinematic' | 'fun';
-export type RenderStatus =
-  | 'draft'
-  | 'uploading'
-  | 'pending'
-  | 'processing'
-  | 'complete'
-  | 'error';
+export type ProjectStatus = 'draft' | 'rendering' | 'complete' | 'error';
 
 export interface User {
   uid: string;
@@ -32,21 +26,11 @@ export interface Project {
   bpm: number;
   photoCount: number;
   audioName: string;
-  status: RenderStatus;
-  videoUrl?: string;
-  watermarkUrl?: string;
-  renderJobId?: string;
+  status: ProjectStatus;
+  localVideoUri?: string;
   errorMessage?: string;
   createdAt?: number;
   updatedAt?: number;
-}
-
-export interface RenderJob {
-  jobId: string;
-  status: 'pending' | 'processing' | 'complete' | 'error';
-  progress: number;
-  videoUrl?: string;
-  error?: string;
 }
 
 export interface PurchaseState {
@@ -82,20 +66,7 @@ export interface ProjectCreateInput {
   bpm: number;
   photoCount: number;
   audioName: string;
-  status?: RenderStatus;
-  watermarkUrl?: string;
-}
-
-export interface RenderRequestPayload {
-  photos: string[];
-  audioUrl: string;
-  format: VideoFormat;
-  style: VideoStyle;
-  bpm: number;
-  titleText?: string;
-  watermarkUrl?: string;
-  userId: string;
-  projectId: string;
+  status?: ProjectStatus;
 }
 
 export interface ToastMessage {
