@@ -1,70 +1,99 @@
 // C:\Users\Valdemir Goncalves\Downloads\BeatVideoMaker\BeatVideoMaker\app\(app)\preview\[projectId].tsx
-import React, { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
+import Video from 'react-native-video';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { colors } from '@/constants/colors';
-import { CREATE_DRAFT_KEY, DEFAULT_BPM, LOCAL_RENDER_ENABLED } from '@/constants/config';
 import { spacing, typography } from '@/constants/styles';
-import { CreateFlowState } from '@/types';
-
-const initialDraft: CreateFlowState = {
-  photos: [],
-  useDefaultMusic: true,
-  bpm: DEFAULT_BPM,
-  format: 'portrait',
-  style: 'fast',
-  titleText: '',
-  watermark: null,
-  audio: null,
-};
 
 export default function PreviewScreen() {
-  const { projectId } = useLocalSearchParams<{ projectId?: string }>();
-  const [draft, setDraft] = useState<CreateFlowState>(initialDraft);
+  const params = useLocalSearchParams<{ projectId?: string; videoUri?: string }>();
+  const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    AsyncStorage.getItem(CREATE_DRAFT_KEY)
-      .then((rawValue) => {
-        const parsed: CreateFlowState = rawValue ? JSON.parse(rawValue) : initialDraft;
-        setDraft(parsed);
-      })
-      .catch(() => setDraft(initialDraft));
-  }, []);
+  const videoUri = useMemo(() => {
+    if (!params.videoUri) return null;
+    return decodeURIComponent(params.videoUri);
+  }, [params.videoUri]);
+
+  const handleSaveToPhone = async () => {
+    if (!videoUri) {
+      Alert.alert('Missing video', 'No local video file was found.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const permission = await MediaLibrary.requestPermissionsAsync(true);
+
+      if (!permission.granted) {
+        throw new Error('Photos permission is required to save the video.');
+      }
+
+      await MediaLibrary.saveToLibraryAsync(videoUri);
+      Alert.alert('Saved', 'The video was saved to your phone.');
+    } catch (error: any) {
+      Alert.alert('Save failed', error?.message ?? 'Could not save the video.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!videoUri) {
+      Alert.alert('Missing video', 'No local video file was found.');
+      return;
+    }
+
+    try {
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        throw new Error('Sharing is not available on this device.');
+      }
+
+      await Sharing.shareAsync(videoUri);
+    } catch (error: any) {
+      Alert.alert('Share failed', error?.message ?? 'Could not share the video.');
+    }
+  };
+
+  if (!videoUri) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Card style={styles.card}>
+          <Text style={styles.title}>Missing local video</Text>
+          <Text style={styles.subtitle}>Go back and render again on this phone.</Text>
+          <Button label="Back" onPress={() => router.back()} />
+        </Card>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <Card style={styles.card}>
-        <Text style={styles.title}>Project ready</Text>
-        <Text style={styles.subtitle}>
-          Project ID: {projectId ?? 'Not available'}
-        </Text>
+        <Text style={styles.title}>Your video is ready</Text>
+        <Text style={styles.subtitle}>Rendered on your phone and ready to save.</Text>
       </Card>
 
-      <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Summary</Text>
-        <Text style={styles.row}>Photos: {draft.photos.length}</Text>
-        <Text style={styles.row}>Song: {draft.audio?.fileName ?? 'No song selected'}</Text>
-        <Text style={styles.row}>Format: {draft.format}</Text>
-        <Text style={styles.row}>Style: {draft.style}</Text>
-        <Text style={styles.row}>BPM: {draft.bpm ?? DEFAULT_BPM}</Text>
-        <Text style={styles.row}>Title: {draft.titleText || 'No title'}</Text>
-      </Card>
-
-      <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Local export status</Text>
-        <Text style={styles.subtitle}>
-          {LOCAL_RENDER_ENABLED
-            ? 'On-device renderer is enabled.'
-            : 'The app has been moved away from server rendering. The next step is wiring the native on-device encoder package.'}
-        </Text>
-      </Card>
+      <View style={styles.videoWrap}>
+        <Video
+          source={{ uri: videoUri }}
+          style={styles.video}
+          controls
+          resizeMode="contain"
+          paused={false}
+          repeat
+        />
+      </View>
 
       <View style={styles.actions}>
-        <Button label="Back to Dashboard" onPress={() => router.replace('/(app)')} />
-        <Button label="Back to Options" onPress={() => router.replace('/(app)/create/options')} variant="secondary" />
+        <Button label="Save to Phone" onPress={handleSaveToPhone} loading={isSaving} />
+        <Button label="Share Video" onPress={handleShare} variant="secondary" />
+        <Button label="Back to Dashboard" onPress={() => router.replace('/(app)')} variant="ghost" />
       </View>
     </SafeAreaView>
   );
@@ -75,7 +104,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: spacing.md,
-    justifyContent: 'center',
     gap: spacing.md,
   },
   card: {
@@ -91,14 +119,16 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 22,
   },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '700',
+  videoWrap: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#000',
   },
-  row: {
-    color: colors.text,
-    fontSize: typography.body,
+  video: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   actions: {
     gap: spacing.sm,
